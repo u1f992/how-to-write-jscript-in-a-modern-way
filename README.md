@@ -31,7 +31,7 @@ Even though it is not available in IE8, Rollup tries to use `Object.defineProper
     // omit
     "scripts": {
         // omit
-        "build": "ECHO Object.defineProperty=function(o,p,d){o[p]=d.value}; > _.js && rollup -c && COPY /B _.js+dist\\index.js _.js && MOVE _.js dist\\index.js"
+        "build": "ECHO Object.defineProperty=function(o,p,d){o[p]=d.value}; > _.js && rollup -c && COPY /B _.js+dist\\index.js _.js && powershell \"Get-Content -Encoding UTF8 _.js | Set-Content -Encoding Unicode dist\\index.js\" && DEL /Q _.js"
     }
     // omit
 }
@@ -49,8 +49,11 @@ rollup -c
 REM Concatenate the temporary file and index.js, overwriting the temporary file.
 COPY /B _.js+dist\\index.js _.js
 
-REM Overwrite index.js with a temporary file.
-MOVE _.js dist\\index.js
+REM Convert encoding from UTF-8 to UTF-16 LE and overwrite index.js
+powershell "Get-Content -Encoding UTF8 _.js | Set-Content -Encoding Unicode dist\\index.js"
+
+REM Remove the temporary file.
+DEL /Q _.js
 ```
 
 ### Edit tsconfig.json

@@ -17,8 +17,40 @@ New-Item -Type File rollup.config.js
 New-Item -Type File .babelrc
 
 npm init --yes
-npm install --save-dev @babel/core @babel/preset-env @rollup/plugin-babel @rollup/plugin-typescript rollup tslib typescript
+npm install --save-dev @babel/core @babel/preset-env @rollup/plugin-babel @rollup/plugin-commonjs @rollup/plugin-typescript rollup tslib typescript
+npm install core-js
 npx tsc --init
+```
+
+### Edit package.json
+
+Even though it is not available in IE8, Rollup tries to use `Object.defineProperty` before the polyfill is applied, I gave up and decided to combine the minimum polyfill at the beginning of the bundled result.
+
+```json
+{
+    // omit
+    "scripts": {
+        // omit
+        "build": "ECHO Object.defineProperty=function(o,p,d){o[p]=d.value}; > _.js && rollup -c && COPY /B _.js+dist\\index.js _.js && MOVE _.js dist\\index.js"
+    }
+    // omit
+}
+```
+
+The entity of `npm run build` is a minified batch file, and detail is below. Since JScript runs only on Windows, there is no need to consider the portability of this script.
+
+```bat
+REM Create a temporary file containing only one polyfill.
+ECHO Object.defineProperty=function(o,p,d){o[p]=d.value}; > _.js
+
+REM Rollup creates dist\index.js.
+rollup -c
+
+REM Concatenate the temporary file and index.js, overwriting the temporary file.
+COPY /B _.js+dist\\index.js _.js
+
+REM Overwrite index.js with a temporary file.
+MOVE _.js dist\\index.js
 ```
 
 ### Edit tsconfig.json
@@ -37,11 +69,12 @@ npx tsc --init
 }
 ```
 
-### Add rollup.config.js
+### Edit rollup.config.js
 
 ```js
 import typescript from "@rollup/plugin-typescript";
 import babel from "@rollup/plugin-babel";
+import commonjs from "@rollup/plugin-commonjs";
 
 export default [
     {
@@ -51,20 +84,23 @@ export default [
             format: 'es'
         },
         plugins: [
-            // Transpile *.ts to *.js
+            // Transpile *.ts
             typescript(),
 
             // Transpile to ES3
             babel({
                 babelHelpers: 'bundled',
                 extensions: ['.js', '.ts'],
-            })
+            }),
+
+            // Process CommonJS modules provided by core-js.
+            commonjs()
         ]
     }
 ];
 ```
 
-### Add .babelrc
+### Edit .babelrc
 
 ```json
 {
